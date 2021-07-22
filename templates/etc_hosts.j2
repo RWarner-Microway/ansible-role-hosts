@@ -30,9 +30,11 @@ ff02::2  ip6-allrouters
 {% for group in hosts_add_ansible_managed_hosts_groups %}
 {% for host in groups[group]|sort %}
 # {{ host }}
-{% set my_interfaces = hostvars[host]['ansible_interfaces']|select('match', '(?!^(lo|docker|nodelocaldns)).*')|default(None) -%}
-  {% if hosts_network_interface -%}
-    {% set di = hosts_network_interface -%}
+{% set my_interfaces = hostvars[host]['ansible_interfaces']|select('match', '(?!^(' + hosts_exclude_interfaces|join('|') + ')).*')|default(None) -%}
+  {% if hosts_network_interface[host] is defined -%}
+      {% set di = hosts_network_interface[host] -%}
+  {% elif ((hosts_network_interface is not mapping) and hosts_network_interface) -%}
+      {% set di = hosts_network_interface -%}
   {% else -%}
     {% set di = hostvars[host]['ansible_default_' + hosts_ip_protocol]['interface']|default(None) -%}
   {% endif -%}
@@ -40,9 +42,23 @@ ff02::2  ip6-allrouters
     {% set addr = hostvars[host]['ansible_' + interface][hosts_ip_protocol]['address']|default(None) -%}
     {% if addr -%}
 {% if interface == di -%}
-{{ addr }}    {{ host }}-{{ interface }}  {{ host }}  {{ hostvars[host]['ansible_fqdn'] }}
+{% if hosts_interface_domain[host][interface] is defined -%}
+{{ addr }}    {{ host }}.{{ hosts_interface_domain[host][interface] }} {{ host }}-{{ interface }}  {{ host }}
+{% elif hosts_interface_domain[interface] is defined -%}
+{{ addr }}    {{ host }}.{{ hosts_interface_domain[interface] }} {{ host }}-{{ interface }}  {{ host }}
+{% elif hosts_default_domain -%}
+{{ addr }}    {{ host }}.{{ hosts_default_domain }} {{ host }}-{{ interface }}  {{ host }}
+{% else -%}
+{{ addr }}    {{ hostvars[host]['ansible_fqdn'] }} {{ host }}-{{ interface }}  {{ host }}
+{% endif -%}
+{% else -%}
+{% if hosts_interface_domain[host][interface] is defined -%}
+{{ addr }}    {{ host }}.{{ hosts_interface_domain[host][interface] }}    {{ host }}-{{ interface }}
+{% elif hosts_interface_domain[interface] is defined -%}
+{{ addr }}    {{ host }}.{{ hosts_interface_domain[interface] }}    {{ host }}-{{ interface }}
 {% else -%}
 {{ addr }}    {{ host }}-{{ interface }}
+{% endif -%}
 {% endif -%}
     {% endif -%}
   {% endfor -%}

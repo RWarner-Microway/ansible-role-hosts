@@ -11,18 +11,25 @@ An Ansible role for managing the hosts file (`/etc/hosts`). Specifically, the re
 ## Selecting the correct network interface
 
 When a host has multiple network interfaces, an entry in the hosts file will be generated for each interface with the interface name as suffix.
-If `hosts_network_interface` is selected, that IP address will also be given the names provided by `ansible_hostname` and `ansible_fqdn`.
-For example, with `hosts_network_interface` set to `eth0`, a node with three interfaces may have entries similar to the following:
+If `hosts_network_interface` is selected, that IP address will also have a fully qualified domain name included.  If `hosts_default_domain` is
+set, the FQDN will be generated using it.  Otherwise, `ansible_fqdn` will be used.  However, the value of `ansible_fqdn` can depend on the
+existing /etc/hosts file which makes this depend on /etc/hosts already being correct in order to make a correct /etc/hosts, a catch-22.
 
 ```
-10.10.0.1      node01-eth0 node01 node01.example.com
+10.10.0.1      node01.example.com node01-eth0 node01
 10.30.0.1      node01-eth1
 192.168.0.50   node01-ib0
 ```
 
-If `hosts_network_interface` is not set, `ansible_hostname` and `ansible_fqdn` will be named according to the default route.
+If `hosts_network_interface` is not set, `ansible_hostname` and `ansible_fqdn` will be named according to the interface providing the default route.
 In cases where `hosts_network_interface` is not set and there is no default route, only the interface-based names will be generated.
 
+`hosts_network_interface` can alternatively be set as an array with unique values per host.
+
+The network interfaces lo, docker, and nodelocaldns are automatically excluded.  The variable `hosts_exclude_interfaces` can
+be used to change the excluded interfaces.
+
+`hosts_interface_domain` allows including a different FQDN for specific interfaces, either cluster wide or per-host
 
 ## Requirements
 
